@@ -22,16 +22,16 @@ contract Monopoly is ERC721Enumerable, AccessControl, ReentrancyGuard, VRFConsum
 
   // range
   uint256 constant MIN = 1;
-  uint256 constant MAX = 10;
+  uint256 constant MAX = 2;
 
   // brown set
-  uint256 constant MED_AVE = 2;
-  uint256 constant BAL_AVE = 3;
+  uint256 constant MED_AVE = 1;
+  uint256 constant BAL_AVE = 2;
 
   // light blue set
-  uint256 constant CONN_AVE = 5;
-  uint256 constant VER_AVE = 7;
-  uint256 constant ORI_AVE = 10;
+  uint256 constant CONN_AVE = 3;
+  uint256 constant VER_AVE = 4;
+  uint256 constant ORI_AVE = 5;
 
   mapping(address => mapping(string => uint256)) public accountToPropertyCount;
 
@@ -115,12 +115,13 @@ contract Monopoly is ERC721Enumerable, AccessControl, ReentrancyGuard, VRFConsum
     s_requests[requestId].fulfilled = true;
     uint256 randomNumber = (randomWords[0] % MAX) + MIN;
     address account = s_requests[requestId].account;
+    uint256 tokenId = s_requests[requestId].tokenId;
     s_requests[requestId].randomWord = randomNumber;
-    addtoPropertyMapping(account, randomNumber);
-    emit RequestFulfilled(requestId, randomNumber, account, s_requests[requestId].tokenId);
+    addtoPropertiesMappings(account, randomNumber);
+    emit RequestFulfilled(requestId, randomNumber, account, tokenId);
   }
 
-  function addtoPropertyMapping(address account_, uint256 randomNumber_) internal {
+  function addtoPropertiesMappings(address account_, uint256 randomNumber_) internal {
     if (randomNumber_ <= MED_AVE) {
       accountToPropertyCount[account_]['MED_AVE'] += 1;
     } else if (randomNumber_ > MED_AVE && randomNumber_ <= BAL_AVE) {
@@ -150,22 +151,54 @@ contract Monopoly is ERC721Enumerable, AccessControl, ReentrancyGuard, VRFConsum
     PRIZES.mintBrown(account_);
     accountToPropertyCount[account_]['MED_AVE'] -= 1;
     accountToPropertyCount[account_]['BAL_AVE'] -= 1;
-    
-    // TODO: BURN
+
+    bool med_ave = false;
+    bool bal_ave = false;
+    uint256 tokenId;
+
+    // TODO: need to continue testing this - had issue where only 1 of 2 nfts burned
+    for (uint256 index = 0; index < balanceOf(account_); index++) {
+      tokenId = tokenOfOwnerByIndex(account_, index);
+      if (med_ave == true && bal_ave == true) {
+        return;
+      } else if (med_ave == false && s_requests[tokenIdToRequest[tokenId]].randomWord <= MED_AVE) {
+        _burn(tokenId);
+        med_ave = true;
+      } else if (bal_ave == false && s_requests[tokenIdToRequest[tokenId]].randomWord > MED_AVE && s_requests[tokenIdToRequest[tokenId]].randomWord <= BAL_AVE) {
+        _burn(tokenId);
+        bal_ave = true;
+      }
+    }
   }
 
-  function claimLightBlueSet(address account_) public {
-    require(accountToPropertyCount[account_]['CONN_AVE'] > 0, 'NO_CONN_AVE');
-    require(accountToPropertyCount[account_]['VER_AVE'] > 0, 'NO_VER_AVE');
-    require(accountToPropertyCount[account_]['ORI_AVE'] > 0, 'NO_ORI_AVE');
+  // function claimLightBlueSet(address account_) public {
+  //   require(accountToPropertyCount[account_]['CONN_AVE'] > 0, 'NO_CONN_AVE');
+  //   require(accountToPropertyCount[account_]['VER_AVE'] > 0, 'NO_VER_AVE');
+  //   require(accountToPropertyCount[account_]['ORI_AVE'] > 0, 'NO_ORI_AVE');
     
-    PRIZES.mintLightBlue(account_);
-    accountToPropertyCount[account_]['CONN_AVE'] -= 1;
-    accountToPropertyCount[account_]['VER_AVE'] -= 1;
-    accountToPropertyCount[account_]['ORI_AVE'] -= 1;
+  //   PRIZES.mintLightBlue(account_);
+  //   accountToPropertyCount[account_]['CONN_AVE'] -= 1;
+  //   accountToPropertyCount[account_]['VER_AVE'] -= 1;
+  //   accountToPropertyCount[account_]['ORI_AVE'] -= 1;
+
+  //   uint256 length;
+  //   uint256 tokenId;
     
-    // TODO: BURN
-  }
+  //   length = accountToPropertyTokenIds[account_]['CONN_AVE'].length;
+  //   tokenId = accountToPropertyTokenIds[account_]['CONN_AVE'][length - 1];
+  //   _burn(tokenId);
+  //   accountToPropertyTokenIds[account_]['CONN_AVE'].pop();
+
+  //   length = accountToPropertyTokenIds[account_]['VER_AVE'].length;
+  //   tokenId = accountToPropertyTokenIds[account_]['VER_AVE'][length - 1];
+  //   _burn(tokenId);
+  //   accountToPropertyTokenIds[account_]['VER_AVE'].pop();
+
+  //   length = accountToPropertyTokenIds[account_]['ORI_AVE'].length;
+  //   tokenId = accountToPropertyTokenIds[account_]['ORI_AVE'][length - 1];
+  //   _burn(tokenId);
+  //   accountToPropertyTokenIds[account_]['ORI_AVE'].pop();
+  // }
 
   function supportsInterface(
     bytes4 interfaceId

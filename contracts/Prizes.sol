@@ -13,7 +13,7 @@ contract Prizes is ERC721Enumerable, AccessControl, ReentrancyGuard  {
 
   event PrizeMinted(uint256 tokenId, uint256 indexed account, string indexed setType);
 
-  uint256 constant MAX_BROWN = 1;
+  uint256 constant MAX_BROWN = 4;
   uint256 constant MAX_LIGHT_BLUE = 2;
 
   mapping(string => uint256) public setTypeToClaimed;
